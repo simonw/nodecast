@@ -2,22 +2,30 @@ var sys = require('sys'),
     http = require('http'),
     posix = require('posix'),
     repl = require('repl'),
-    dj = require('./djangode')
-;
+    dj = require('./djangode'),
+    redis = require('./redis');
 
 var PORT = 8002;
+
+var db = redis.create_client();
 
 messages = [];
 message_queue = new process.EventEmitter();
 
-addMessage = function(msg) {
-    msg.id = messages.length;
-    messages.push(msg);
-    message_queue.emit('message', msg);
+addMessage = function(msg, callback) {
+    db.llen('nodecast-queue', function(i) {
+        msg.id = i;
+        db.rpush('nodecast-queue', JSON.stringify(msg), function() {
+            message_queue.emit('message', msg);
+            callback(msg);
+        });
+    });
 }
 
-getMessagesSince = function(id) {
-    return messages.slice(id);
+getMessagesSince = function(id, callback) {
+    db.lrange('nodecast-queue', id, 10000, function(items) {
+        callback(items.map(JSON.parse));
+    });
 }
 
 var submit_form = '<form action="/submit-message" method="post"> \
@@ -28,34 +36,40 @@ var submit_form = '<form action="/submit-message" method="post"> \
 var app = dj.makeApp([
     ['^/since$', function(req, res) {
         var id = req.uri.params.id || 0;
-        dj.respond(res, JSON.stringify(getMessagesSince(id)), 'text/plain');
+        getMessagesSince(id, function(messages) {
+            dj.respond(res, JSON.stringify(messages), 'text/plain');
+        });
     }],
     ['^/wait$', function(req, res) {
-        var id = req.uri.params.id || 0;
-        var messages = getMessagesSince(id);
-        if (messages.length) {
-            dj.respond(res, JSON.stringify(messages), 'text/plain');
-        } else {
-            // Wait for the next message
-            var listener = message_queue.addListener('message', function() {
-                dj.respond(res, 
-                    JSON.stringify(getMessagesSince(id)), 'text/plain'
-                );
-                message_queue.removeListener('message', listener);
-                clearTimeout(timeout);
-            });
-            var timeout = setTimeout(function() {
-                sys.puts("Request for ID " + id + " timed out");
-                message_queue.removeListener('message', listener);
-                dj.respond(res, JSON.stringify([]), 'text/plain');
-            }, 10000);
-        }
+        var id = parseInt(req.uri.params.id || 0, 10);
+        getMessagesSince(id, function(messages) {
+            if (messages.length) {
+                dj.respond(res, JSON.stringify(messages), 'text/plain');
+            } else {
+                // Wait for the next message
+                var listener=message_queue.addListener('message', function() {
+                    getMessagesSince(id, function(messages) {
+                        dj.respond(res, 
+                            JSON.stringify(messages), 'text/plain'
+                        );
+                        message_queue.removeListener('message', listener);
+                        clearTimeout(timeout);
+                    });
+                });
+                var timeout = setTimeout(function() {
+                    sys.puts("Request for ID " + id + " timed out");
+                    message_queue.removeListener('message', listener);
+                    dj.respond(res, JSON.stringify([]), 'text/plain');
+                }, 10000);
+            }
+        });
     }],
     ['^/submit-message$', function(req, res) {
         dj.extractPost(req, function(params) {
-            addMessage(params);
-            s = submit_form + "Done! Message was assigned ID " + params.id
-            dj.respond(res, s);
+            addMessage(params, function(msg) {
+                s = submit_form + "Done! Message was assigned ID " + msg.id
+                dj.respond(res, s);
+            });
         });
     }],
     ['^/error$', function(req, res) {
