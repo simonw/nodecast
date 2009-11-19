@@ -290,6 +290,11 @@ function makeApp(urls, options) {
     }
 }
 
+var submit_form = '<form action="/submit-message" method="post"> \
+    <input type="text" id="t" name="text"> \
+    <input type="submit"> \
+</form><script>document.getElementById("t").focus();</script>';
+
 var app = makeApp([
     ['^/since$', function(req, res) {
         var id = req.uri.params.id || 0;
@@ -319,20 +324,17 @@ var app = makeApp([
     ['^/submit-message$', function(req, res) {
         extractPost(req, function(params) {
             addMessage(params);
-            respond(res, "Done! Message was assigned ID " + params.id);
+            s = submit_form + "Done! Message was assigned ID " + params.id
+            respond(res, s);
         });
     }],
     ['^/error$', function(req, res) {
         "bob"("not a function");
     }],
     ['^/message-form$', function(req, res) {
-        respond(res,
-        '<form action="/submit-message" method="post"> \
-            <input type="text" name="text"> \
-            <input type="submit"> \
-        </form>');
+        respond(res, submit_form);
     }],
-    ['^/static/(.*)$', serveFile]
+    ['^/(.*)$', serveFile] // catchall for other reqs
 ]);
 
 function default_show_404(req, res) {
