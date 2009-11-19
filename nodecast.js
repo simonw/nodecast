@@ -25,7 +25,7 @@ addMessage = function(msg, callback) {
 
 getMessagesSince = function(id, callback) {
     db.lrange(REDIS_KEY, id, 10000, function(items) {
-        callback(items.map(JSON.parse));
+        callback((items || []).map(JSON.parse));
     });
 }
 
