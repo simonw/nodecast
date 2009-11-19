@@ -8,14 +8,15 @@ var sys = require('sys'),
 var PORT = 8002;
 
 var db = redis.create_client();
+var REDIS_KEY = 'nodecast-queue';
 
 messages = [];
 message_queue = new process.EventEmitter();
 
 addMessage = function(msg, callback) {
-    db.llen('nodecast-queue', function(i) {
+    db.llen(REDIS_KEY, function(i) {
         msg.id = i;
-        db.rpush('nodecast-queue', JSON.stringify(msg), function() {
+        db.rpush(REDIS_KEY, JSON.stringify(msg), function() {
             message_queue.emit('message', msg);
             callback(msg);
         });
@@ -23,7 +24,7 @@ addMessage = function(msg, callback) {
 }
 
 getMessagesSince = function(id, callback) {
-    db.lrange('nodecast-queue', id, 10000, function(items) {
+    db.lrange(REDIS_KEY, id, 10000, function(items) {
         callback(items.map(JSON.parse));
     });
 }
@@ -31,6 +32,8 @@ getMessagesSince = function(id, callback) {
 var submit_form = '<form action="/submit-message" method="post"> \
     <input type="text" id="t" name="text"> \
     <input type="submit"> \
+</form><form action="/clear-messages"> \
+    <p><input type="submit" value="Clear all messages"> \
 </form><script>document.getElementById("t").focus();</script>';
 
 var app = dj.makeApp([
@@ -70,6 +73,11 @@ var app = dj.makeApp([
                 s = submit_form + "Done! Message was assigned ID " + msg.id
                 dj.respond(res, s);
             });
+        });
+    }],
+    ['^/clear-messages$', function(req, res) {
+        db.del(REDIS_KEY, function() {
+            dj.redirect(res, '/message-form');
         });
     }],
     ['^/error$', function(req, res) {
