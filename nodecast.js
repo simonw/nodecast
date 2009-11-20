@@ -45,7 +45,6 @@ var app = dj.makeApp([
                 clearTimeout(timeout);
             });
             var timeout = setTimeout(function() {
-                sys.puts("Request for ID " + id + " timed out");
                 message_queue.removeListener('message', listener);
                 dj.respond(res, JSON.stringify([]), 'text/plain');
             }, 10000);
