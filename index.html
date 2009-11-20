@@ -21,7 +21,6 @@ li {
 var last_seen = 0;
 jQuery(function($) {
     var ul = $('ul');
-    
     function fetchLatest() {
         $.getJSON('/wait?id=' + last_seen, function(d) {
             $.each(d, function() {
@@ -33,7 +32,6 @@ jQuery(function($) {
     }
     fetchLatest();
 });
-
 </script>
 </head>
 <body>

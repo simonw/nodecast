@@ -2,8 +2,10 @@ var sys = require('sys'),
     http = require('http'),
     posix = require('posix'),
     repl = require('repl'),
-    dj = require('./djangode'),
     redis = require('./redis');
+
+// Make visible to repl:
+dj = require('./djangode');
 
 var PORT = 8002;
 
@@ -29,7 +31,8 @@ getMessagesSince = function(id, callback) {
     });
 }
 
-var submit_form = '<form action="/submit-message" method="post"> \
+var submit_form = '<h1>Send a message</h1> \
+<form action="/submit-message" method="post"> \
     <input type="text" id="t" name="text"> \
     <input type="submit"> \
 </form><form action="/clear-messages"> \
@@ -83,6 +86,9 @@ var app = dj.makeApp([
     ['^/error$', function(req, res) {
         "bob"("not a function");
     }],
+    ['^/favicon\.ico$', function(req, res) {
+        dj.respond(res, '');
+    }],
     ['^/message-form$', function(req, res) {
         dj.respond(res, submit_form);
     }],
@@ -94,4 +100,4 @@ server = http.createServer(app);
 server.listen(PORT);
 
 sys.puts("Server running at http://127.0.0.1:" + PORT + "/");
-repl.start("last_request has last request> ");
+repl.start("dj.debuginfo > ");
