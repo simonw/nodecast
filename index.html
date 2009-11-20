@@ -25,7 +25,7 @@ jQuery(function($) {
         $.getJSON('/wait?id=' + last_seen, function(d) {
             $.each(d, function() {
                 last_seen = parseInt(this.id, 10) + 1;
-                ul.append($('<li></li>').text(this.text));
+                ul.prepend($('<li></li>').text(this.text));
             });
             fetchLatest();
         });

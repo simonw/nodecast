@@ -63,7 +63,6 @@ var app = dj.makeApp([
                     });
                 });
                 var timeout = setTimeout(function() {
-                    sys.puts("Request for ID " + id + " timed out");
                     message_queue.removeListener('message', listener);
                     dj.respond(res, JSON.stringify([]), 'text/plain');
                 }, 10000);
@@ -101,3 +100,4 @@ server.listen(PORT);
 
 sys.puts("Server running at http://127.0.0.1:" + PORT + "/");
 repl.start("dj.debuginfo > ");
+
