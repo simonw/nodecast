@@ -5,7 +5,7 @@ var sys = require('sys'),
     dj = require('./djangode')
 ;
 
-var PORT = 8002;
+var PORT = 8006;
 
 messages = [];
 message_queue = new process.EventEmitter();
@@ -26,9 +26,15 @@ var submit_form = '<form action="/submit-message" method="post"> \
 </form><script>document.getElementById("t").focus();</script>';
 
 var app = dj.makeApp([
-    ['^/since$', function(req, res) {
-        var id = req.uri.params.id || 0;
-        dj.respond(res, JSON.stringify(getMessagesSince(id)), 'text/plain');
+    ['^/message-form$', function(req, res) {
+        dj.respond(res, submit_form);
+    }],
+    ['^/submit-message$', function(req, res) {
+        dj.extractPost(req, function(params) {
+            addMessage(params);
+            s = submit_form + "Done! Message was assigned ID " + params.id
+            dj.respond(res, s);
+        });
     }],
     ['^/wait$', function(req, res) {
         var id = req.uri.params.id || 0;
@@ -50,25 +56,16 @@ var app = dj.makeApp([
             }, 10000);
         }
     }],
-    ['^/submit-message$', function(req, res) {
-        dj.extractPost(req, function(params) {
-            addMessage(params);
-            s = submit_form + "Done! Message was assigned ID " + params.id
-            dj.respond(res, s);
-        });
+    ['^/$', function(req, res) {
+        dj.serveFile(req, res, 'index.html');
     }],
-    ['^/error$', function(req, res) {
-        "bob"("not a function");
-    }],
-    ['^/message-form$', function(req, res) {
-        dj.respond(res, submit_form);
-    }],
-    ['^/(.*)$', dj.serveFile] // catchall for other reqs
+    ['^/jquery\.js$', function(req, res) {
+        dj.serveFile(req, res, 'jquery-1.3.2.js');
+    }]
 ]);
-
 
 server = http.createServer(app);
 server.listen(PORT);
 
 sys.puts("Server running at http://127.0.0.1:" + PORT + "/");
-repl.start("last_request has last request> ");
+repl.start("> ");
